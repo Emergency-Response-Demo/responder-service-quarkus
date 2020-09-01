@@ -33,7 +33,7 @@ public class ResponderLocationUpdatedSource {
                 BigDecimal lat = json.getDouble("lat") != null ? BigDecimal.valueOf(json.getDouble("lat")) : null;
                 BigDecimal lon = json.getDouble("lon") != null ? BigDecimal.valueOf(json.getDouble("lon")) : null;
                 String status = json.getString("status");
-                if (responderId != null && "MOVING".equalsIgnoreCase(status)) {
+                if (responderId != null && !"DROPPED".equalsIgnoreCase(status)) {
                     Responder responder = new Responder.Builder(responderId).latitude(lat).longitude(lon).build();
                     log.debug("Processing 'ResponderUpdateLocationEvent' message for responder '" + responder.getId()
                             + "' from topic:partition:offset " + message.getTopic() + ":" + message.getPartition()
