@@ -1,5 +1,6 @@
 package com.redhat.erdemo.responder.service;
 
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.enterprise.context.ApplicationScoped;
@@ -81,18 +82,20 @@ public class ResponderService {
 
         ResponderEntity entity = fromResponder(responder);
         repository.create(entity);
-        eventPublisher.responderCreated(entity.getId());
-        return toResponder(entity);
+        Responder created = toResponder(entity);
+        eventPublisher.responderCreated(created);
+        return created;
     }
 
     @Transactional
     public void createResponders(List<Responder> responders) {
-        List<Long> responderIds = responders.stream()
+        List<Responder> createdResponders = responders.stream()
                 .map(this::fromResponder)
-                .map(re -> repository.create(re).getId())
+                .map(re -> repository.create(re))
+                .map(this::toResponder)
                 .collect(Collectors.toList());
 
-        eventPublisher.respondersCreated(responderIds);
+        eventPublisher.respondersCreated(createdResponders);
     }
 
     @Transactional
@@ -148,8 +151,8 @@ public class ResponderService {
         return new ResponderEntity.Builder(responder.getId() == null ? 0 : Long.parseLong(responder.getId()), 0L)
                 .name(responder.getName())
                 .phoneNumber(responder.getPhoneNumber())
-                .currentPositionLatitude(responder.getLatitude())
-                .currentPositionLongitude(responder.getLongitude())
+                .currentPositionLatitude(responder.getLatitude() == null ? null : responder.getLatitude().setScale(5, RoundingMode.HALF_UP))
+                .currentPositionLongitude(responder.getLongitude() == null ? null : responder.getLongitude().setScale(5, RoundingMode.HALF_UP))
                 .boatCapacity(responder.getBoatCapacity())
                 .medicalKit(responder.isMedicalKit())
                 .available(responder.isAvailable())

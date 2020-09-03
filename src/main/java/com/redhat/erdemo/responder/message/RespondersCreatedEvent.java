@@ -1,18 +1,20 @@
 package com.redhat.erdemo.responder.message;
 
+import com.redhat.erdemo.responder.model.Responder;
+
 public class RespondersCreatedEvent {
 
     private RespondersCreatedEvent() {};
 
     private int created;
 
-    private Long[] responders;
+    private Responder[] responders;
 
     public int getCreated() {
         return created;
     }
 
-    public Long[] getResponders() {
+    public Responder[] getResponders() {
         return responders;
     }
 
@@ -20,7 +22,7 @@ public class RespondersCreatedEvent {
 
         private final RespondersCreatedEvent event;
 
-        public Builder(Long[] responders) {
+        public Builder(Responder[] responders) {
             event = new RespondersCreatedEvent();
             event.responders = responders;
             event.created = responders.length;

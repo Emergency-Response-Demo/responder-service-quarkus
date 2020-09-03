@@ -27,16 +27,16 @@ public class EventPublisher {
 
     private final UnicastProcessor<Pair<String, Message<?>>> processor = UnicastProcessor.create();
 
-    public void responderCreated(Long id) {
+    public void responderCreated(Responder responder) {
         Message<RespondersCreatedEvent> message = new Message.Builder<>("RespondersCreatedEvent", "ResponderService",
-                new RespondersCreatedEvent.Builder(new Long[]{id}).build()).build();
-        processor.onNext(ImmutablePair.of(Integer.toString(id.hashCode()), message));
+                new RespondersCreatedEvent.Builder(new Responder[]{responder}).build()).build();
+        processor.onNext(ImmutablePair.of(Integer.toString(responder.hashCode()), message));
     }
 
-    public void respondersCreated(List<Long> ids) {
+    public void respondersCreated(List<Responder> responders) {
         Message<RespondersCreatedEvent> message = new Message.Builder<>("RespondersCreatedEvent", "ResponderService",
-                new RespondersCreatedEvent.Builder(ids.toArray(new Long[0])).build()).build();
-        processor.onNext(ImmutablePair.of(Integer.toString(ids.hashCode()), message));
+                new RespondersCreatedEvent.Builder(responders.toArray(new Responder[0])).build()).build();
+        processor.onNext(ImmutablePair.of(Integer.toString(responders.hashCode()), message));
     }
 
     public void respondersDeleted(List<Long> ids) {

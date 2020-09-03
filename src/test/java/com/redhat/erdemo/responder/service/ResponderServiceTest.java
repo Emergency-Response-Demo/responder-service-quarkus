@@ -50,6 +50,9 @@ public class ResponderServiceTest {
     @Captor
     private ArgumentCaptor<ResponderEntity> entityCaptor;
 
+    @Captor
+    private ArgumentCaptor<List<Responder>> responderListCaptor;
+
     @BeforeEach
     void init() {
         initMocks(this);
@@ -506,7 +509,7 @@ public class ResponderServiceTest {
         assertThat(created.isPerson(), equalTo(true));
         assertThat(created.isEnrolled(), equalTo(true));
 
-        verify(eventPublisher).responderCreated(100L);
+        verify(eventPublisher).responderCreated(created);
     }
 
     @Test
@@ -554,7 +557,10 @@ public class ResponderServiceTest {
         assertThat(responderEntities.get(0).getName(), equalTo("John Doe"));
         assertThat(responderEntities.get(1).getName(), equalTo("John Foo"));
 
-        verify(eventPublisher).respondersCreated(Arrays.asList(1L, 2L));
+        verify(eventPublisher).respondersCreated(responderListCaptor.capture());
+        List<Responder> responderList = responderListCaptor.getValue();
+        assertThat(responderList, notNullValue());
+        assertThat(responderList.size(), equalTo(2));
     }
 
     @Test
