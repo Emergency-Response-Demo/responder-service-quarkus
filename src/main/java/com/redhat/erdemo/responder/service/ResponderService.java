@@ -171,7 +171,7 @@ public class ResponderService {
     @Transactional
     public void clear(boolean delete) {
         log.info("Clear called with delete " + delete);
-        List<Long> responderIds = repository.nonPersonResponders().stream().map(ResponderEntity::getId).collect(Collectors.toList());
+        List<String> responderIds = repository.nonPersonResponders().stream().map(r -> Long.toString(r.getId())).collect(Collectors.toList());
         if (!delete) {
             repository.clear();
         } else {

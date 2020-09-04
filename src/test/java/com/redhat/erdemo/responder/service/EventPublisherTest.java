@@ -105,23 +105,23 @@ public class EventPublisherTest {
 
         InMemorySink<String> results = connector.sink("responder-event");
 
-        eventPublisher.respondersDeleted(Arrays.asList(1L, 2L, 3L));
+        eventPublisher.respondersDeleted(Arrays.asList("1", "2", "3"));
 
         assertThat(results.received().size(), equalTo(1));
         Message<String> message = results.received().get(0);
         assertThat(message, instanceOf(OutgoingKafkaRecord.class));
         String value = message.getPayload();
         String key = ((OutgoingKafkaRecord<String, String>)message).getKey();
-        assertThat(key, equalTo("30817"));
+        assertThat(key, notNullValue());
         assertThat(value, jsonNodePresent("id"));
         assertThat(value, jsonPartEquals("messageType", "RespondersDeletedEvent"));
         assertThat(value, jsonPartEquals("invokingService", "ResponderService"));
         assertThat(value, jsonNodePresent("timestamp"));
         assertThat(value, jsonNodePresent("body"));
         assertThat(value, jsonPartEquals("body.deleted", 3));
-        assertThat(value, jsonPartEquals("body.responders[0]", 1));
-        assertThat(value, jsonPartEquals("body.responders[1]", 2));
-        assertThat(value, jsonPartEquals("body.responders[2]", 3));
+        assertThat(value, jsonPartEquals("body.responders[0]", "\"1\""));
+        assertThat(value, jsonPartEquals("body.responders[1]", "\"2\""));
+        assertThat(value, jsonPartEquals("body.responders[2]", "\"3\""));
     }
 
     @Test

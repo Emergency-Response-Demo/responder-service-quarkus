@@ -6,13 +6,13 @@ public class RespondersDeletedEvent {
 
     private int deleted;
 
-    private Long[] responders;
+    private String[] responders;
 
     public int getDeleted() {
         return deleted;
     }
 
-    public Long[] getResponders() {
+    public String[] getResponders() {
         return responders;
     }
 
@@ -20,7 +20,7 @@ public class RespondersDeletedEvent {
 
         private final RespondersDeletedEvent event;
 
-        public Builder(Long[] responders) {
+        public Builder(String[] responders) {
             event = new RespondersDeletedEvent();
             event.responders = responders;
             event.deleted = responders.length;

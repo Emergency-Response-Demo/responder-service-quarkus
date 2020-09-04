@@ -790,7 +790,7 @@ public class ResponderServiceTest {
         responderService.clear(false);
         verify(responderRepository).nonPersonResponders();
         verify(responderRepository).clear();
-        verify(eventPublisher).respondersDeleted(Arrays.asList(1L, 2L));
+        verify(eventPublisher).respondersDeleted(Arrays.asList("1", "2"));
     }
 
     @Test
@@ -827,7 +827,7 @@ public class ResponderServiceTest {
         responderService.clear(true);
         verify(responderRepository).nonPersonResponders();
         verify(responderRepository).resetPersonsDeleteBots();
-        verify(eventPublisher).respondersDeleted(Arrays.asList(1L, 2L));
+        verify(eventPublisher).respondersDeleted(Arrays.asList("1", "2"));
     }
 
     @Test

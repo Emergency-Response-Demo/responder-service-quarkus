@@ -39,9 +39,9 @@ public class EventPublisher {
         processor.onNext(ImmutablePair.of(Integer.toString(responders.hashCode()), message));
     }
 
-    public void respondersDeleted(List<Long> ids) {
+    public void respondersDeleted(List<String> ids) {
         Message<RespondersDeletedEvent> message = new Message.Builder<>("RespondersDeletedEvent", "ResponderService",
-                new RespondersDeletedEvent.Builder(ids.toArray(new Long[0])).build()).build();
+                new RespondersDeletedEvent.Builder(ids.toArray(new String[0])).build()).build();
         processor.onNext(ImmutablePair.of(Integer.toString(ids.hashCode()), message));
     }
 
