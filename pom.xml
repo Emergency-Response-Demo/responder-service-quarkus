@@ -18,6 +18,7 @@
     <quarkus.platform.version>1.5.2.Final</quarkus.platform.version>
     <surefire-plugin.version>2.22.1</surefire-plugin.version>
     <commons-lang.version>3.9</commons-lang.version>
+    <version.commons-text>1.8</version.commons-text>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -64,9 +65,18 @@
       <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
     </dependency>
     <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-kubernetes-config</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${commons-lang.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+      <version>${version.commons-text}</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

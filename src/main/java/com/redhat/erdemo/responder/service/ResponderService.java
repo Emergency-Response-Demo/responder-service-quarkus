@@ -103,6 +103,9 @@ public class ResponderService {
 
         ResponderEntity entity = fromResponder(updateTo);
         Triple<Boolean, String, ResponderEntity> result = repository.update(entity);
+
+        log.debug("updateResponder() "+updateTo.getId()+" : available = "+updateTo.isAvailable()+" : result = "+result.getMiddle());
+
         return ImmutableTriple.of(result.getLeft(), result.getMiddle(), toResponder(result.getRight()));
 
     }

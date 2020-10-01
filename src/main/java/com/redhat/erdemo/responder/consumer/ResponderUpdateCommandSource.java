@@ -78,6 +78,7 @@ public class ResponderUpdateCommandSource {
         } catch (Exception e) {
             log.warn("Unexpected message which is not JSON or without 'messageType' field.");
             log.warn("Message: " + messageAsJson);
+            e.printStackTrace();
         }
         return Optional.empty();
     }
