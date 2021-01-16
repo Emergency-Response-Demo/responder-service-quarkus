@@ -146,11 +146,7 @@ public class ResponderResource {
 
         if (delete.orElse("").equals("all")) {
             responderService.deleteAll();
-        } else if (delete.orElse("").equals("bots")) {
-            responderService.clear(true);
-        } else {
-            responderService.clear(false);
-        }
+        } else responderService.clear(delete.orElse("").equals("bots"));
         return Response.ok().build();
     }
 

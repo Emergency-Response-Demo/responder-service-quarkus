@@ -55,7 +55,7 @@ public class EventPublisher {
 
     @Outgoing("responder-event")
     public Multi<org.eclipse.microprofile.reactive.messaging.Message<String>> responderEvent() {
-        return processor.onItem().apply(this::toMessage);
+        return processor.onItem().transform(this::toMessage);
     }
 
     private org.eclipse.microprofile.reactive.messaging.Message<String> toMessage(Pair<String, Message<?>> pair) {

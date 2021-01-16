@@ -1,4 +1,4 @@
-package com.redhat.cajun.navy.responder.message.serialization;
+package com.redhat.erdemo.responder.message.serialization;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Map;

@@ -44,7 +44,7 @@ public class ResponderUpdateCommandSource {
                 acceptMessage(message.getPayload()).ifPresent(j -> processMessage(j, message.getTopic(), message.getPartition(), message.getOffset()));
             } catch (Exception e) {
                 log.error("Error processing msg " + message.getPayload(), e);
-            };
+            }
             return message.ack();
         });
     }
@@ -78,7 +78,6 @@ public class ResponderUpdateCommandSource {
         } catch (Exception e) {
             log.warn("Unexpected message which is not JSON or without 'messageType' field.");
             log.warn("Message: " + messageAsJson);
-            e.printStackTrace();
         }
         return Optional.empty();
     }
