@@ -29,6 +29,8 @@ import io.vertx.kafka.client.consumer.impl.KafkaConsumerRecordImpl;
 import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
 import io.vertx.mutiny.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.common.record.TimestampType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -68,7 +70,7 @@ public class ResponderLocationUpdatedSourceTest {
                 "}";
 
 
-        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json));
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json, true, "application/json","ResponderLocationUpdatedEvent" ));
         c.toCompletableFuture().get();
 
         verify(responderService).updateResponderLocation(responderCaptor.capture());
@@ -102,7 +104,7 @@ public class ResponderLocationUpdatedSourceTest {
                 "  \"continue\": true\n" +
                 "}";
 
-        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json));
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json, true, "application/json","ResponderLocationUpdatedEvent" ));
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponderLocation(any(Responder.class));
@@ -110,7 +112,7 @@ public class ResponderLocationUpdatedSourceTest {
     }
 
     @Test
-    public void testResponderLocationUpdateEventWrongMessage() throws ExecutionException, InterruptedException {
+    public void testResponderLocationUpdateEventMissingResponderId() throws ExecutionException, InterruptedException {
         String json = "{\n" +
                 "  \"missionId\": \"f5a9bc5e-408c-4f86-8592-6f67bb73c5fd\",\n" +
                 "  \"incidentId\": \"5d9b2d3a-136f-414f-96ba-1b2a445fee5d\",\n" +
@@ -121,17 +123,99 @@ public class ResponderLocationUpdatedSourceTest {
                 "  \"continue\": true\n" +
                 "}";
 
-        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json));
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json, true, "application/json","ResponderLocationUpdatedEvent" ));
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponderLocation(any(Responder.class));
         assertThat(messageAck, equalTo(true));
     }
 
-    private IncomingKafkaRecord<String, String> toRecord(String key, String payload) {
+    @Test
+    public void testResponderLocationUpdateEventMissingLatLon() throws ExecutionException, InterruptedException {
+        String json = "{\n" +
+                "  \"responderId\": \"64\",\n" +
+                "  \"missionId\": \"f5a9bc5e-408c-4f86-8592-6f67bb73c5fd\",\n" +
+                "  \"incidentId\": \"5d9b2d3a-136f-414f-96ba-1b2a445fee5d\",\n" +
+                "  \"status\": \"DROPPED\",\n" +
+                "  \"human\": false,\n" +
+                "  \"continue\": true\n" +
+                "}";
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("64", json, true, "application/json","ResponderLocationUpdatedEvent" ));
+        c.toCompletableFuture().get();
+
+        verify(responderService, never()).updateResponderLocation(any(Responder.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    @Test
+    public void testProcessMessageNotACloudEvent() throws ExecutionException, InterruptedException {
+
+        String json = "{}";
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, false, "application/json", "ResponderLocationUpdatedEvent"));
+        c.toCompletableFuture().get();
+
+        verify(responderService, never()).updateResponderLocation(any(Responder.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    @Test
+    public void testProcessMessageWrongMessageType() throws ExecutionException, InterruptedException {
+
+        String json = "{}";
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, true, "application/json", "WrongMessageType"));
+        c.toCompletableFuture().get();
+
+        verify(responderService, never()).updateResponderLocation(any(Responder.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    @Test
+    public void testProcessMessageWrongDataContentType() throws ExecutionException, InterruptedException {
+
+        String json = "{}";
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, true, "application/avro", "ResponderLocationUpdatedEvent"));
+        c.toCompletableFuture().get();
+
+        verify(responderService, never()).updateResponderLocation(any(Responder.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    @Test
+    public void testProcessMessageNoDataContentType() throws ExecutionException, InterruptedException {
+
+        String json = "{}";
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, true, null, "ResponderLocationUpdatedEvent"));
+        c.toCompletableFuture().get();
+
+        verify(responderService, never()).updateResponderLocation(any(Responder.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    private IncomingKafkaRecord<String, String> toRecord(String key, String payload, boolean cloudEvent, String dataContentType, String messageType) {
 
         MockKafkaConsumer<String, String> mc = new MockKafkaConsumer<>();
-        ConsumerRecord<String, String> cr = new ConsumerRecord<>("topic", 1, 100, key, payload);
+        ConsumerRecord<String, String> cr;
+        if (cloudEvent) {
+            RecordHeaders headers = new RecordHeaders();
+            headers.add("ce_specversion", "1.0".getBytes());
+            headers.add("ce_id", "18cb49fe-9353-4856-9a0c-d66fe1237c86".getBytes());
+            headers.add("ce_type", messageType.getBytes());
+            headers.add("ce_source", "test".getBytes());
+            headers.add("ce_time", "2020-12-30T19:54:20.765566GMT".getBytes());
+            if (dataContentType != null) {
+                headers.add("ce_datacontenttype", dataContentType.getBytes());
+                headers.add("content-type", dataContentType.getBytes());
+            }
+            cr = new ConsumerRecord<>("topic", 1, 100, ConsumerRecord.NO_TIMESTAMP, TimestampType.NO_TIMESTAMP_TYPE,
+                    (long) ConsumerRecord.NULL_CHECKSUM, ConsumerRecord.NULL_SIZE, ConsumerRecord.NULL_SIZE, key, payload, headers);
+        } else {
+            cr = new ConsumerRecord<>("topic", 1, 100, key, payload);
+        }
         KafkaConsumerRecord<String, String> kcr = new KafkaConsumerRecord<>(new KafkaConsumerRecordImpl<>(cr));
         KafkaCommitHandler kch = new KafkaCommitHandler() {
             @Override
@@ -140,7 +224,7 @@ public class ResponderLocationUpdatedSourceTest {
                 return uni.subscribeAsCompletionStage();
             }
         };
-        return new IncomingKafkaRecord<>(kcr, kch, null, false, false);
+        return new IncomingKafkaRecord<>(kcr, kch, null, true, false);
     }
 
     private class MockKafkaConsumer<K, V> extends KafkaConsumerImpl<K, V> {
