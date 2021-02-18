@@ -108,7 +108,48 @@ public class ResponderUpdateCommandSourceTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testProcessMessageUpdateResponderNoIncidentIdHeader() throws ExecutionException, InterruptedException {
+    public void testProcessMessageUpdateResponderNoIncidentIdExtension() throws ExecutionException, InterruptedException {
+
+        String json = "{" +
+                "\"responder\" : {" +
+                "\"id\" : \"2\"," +
+                "\"available\" : false" +
+                "} " +
+                "}";
+
+        Responder updated = new Responder.Builder("2")
+                .name("John Doe")
+                .phoneNumber("111-222-333")
+                .longitude(new BigDecimal("30.12345"))
+                .latitude(new BigDecimal("-77.98765"))
+                .boatCapacity(3)
+                .medicalKit(true)
+                .available(false)
+                .build();
+        when(responderService.updateResponder(any(Responder.class))).thenReturn(new ImmutableTriple<>(true, "ok", updated));
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("2", json, true, "application/json", "UpdateResponderCommand", null));
+        c.toCompletableFuture().get();
+
+        verify(responderService).updateResponder(responderCaptor.capture());
+        Responder captured = responderCaptor.getValue();
+        assertThat(captured, notNullValue());
+        assertThat(captured.getId(), equalTo("2"));
+        assertThat(captured.isAvailable(), equalTo(false));
+        assertThat(captured.getName(), nullValue());
+        assertThat(captured.getPhoneNumber(), nullValue());
+        assertThat(captured.getLatitude(), nullValue());
+        assertThat(captured.getLongitude(), nullValue());
+        assertThat(captured.getBoatCapacity(), nullValue());
+        assertThat(captured.isMedicalKit(), nullValue());
+
+        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testProcessMessageUpdateResponderIncidentIdExtensionBlank() throws ExecutionException, InterruptedException {
 
         String json = "{" +
                 "\"responder\" : {" +

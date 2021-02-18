@@ -53,6 +53,7 @@ public class ResponderUpdateCommandSource {
     }
 
     private void processMessage(JsonObject json, String incidentId, String topic, int partition, long offset) {
+
         JsonObject responderJson = json.getJsonObject("responder");
         Responder responder = fromJson(responderJson);
 
@@ -61,7 +62,7 @@ public class ResponderUpdateCommandSource {
 
         Triple<Boolean, String, Responder> result = responderService.updateResponder(responder);
 
-        if (incidentId != null) {
+        if (incidentId != null && !incidentId.isBlank()) {
             eventPublisher.responderUpdated(result, incidentId);
         }
     }
