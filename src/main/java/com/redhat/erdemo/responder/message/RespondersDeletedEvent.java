@@ -2,7 +2,7 @@ package com.redhat.erdemo.responder.message;
 
 public class RespondersDeletedEvent {
 
-    private RespondersDeletedEvent() {};
+    private RespondersDeletedEvent() {}
 
     private int deleted;
 

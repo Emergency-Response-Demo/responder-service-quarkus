@@ -3,24 +3,24 @@ package com.redhat.erdemo.responder.service;
 import static net.javacrumbs.jsonunit.JsonMatchers.jsonNodePresent;
 import static net.javacrumbs.jsonunit.JsonMatchers.jsonPartEquals;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import javax.enterprise.inject.Any;
 import javax.inject.Inject;
 
 import com.redhat.erdemo.responder.model.Responder;
 import io.quarkus.test.junit.QuarkusTest;
+import io.smallrye.reactive.messaging.ce.impl.DefaultOutgoingCloudEventMetadata;
 import io.smallrye.reactive.messaging.connectors.InMemoryConnector;
 import io.smallrye.reactive.messaging.connectors.InMemorySink;
-import io.smallrye.reactive.messaging.kafka.OutgoingKafkaRecord;
+import io.smallrye.reactive.messaging.kafka.OutgoingKafkaRecordMetadata;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.eclipse.microprofile.reactive.messaging.Message;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +38,7 @@ public class EventPublisherTest {
         connector.sink("responder-event").clear();
     }
 
+    @SuppressWarnings("rawtypes")
     @Test
     void testResponderCreated() {
 
@@ -51,19 +52,30 @@ public class EventPublisherTest {
 
         assertThat(results.received().size(), equalTo(1));
         Message<String> message = results.received().get(0);
-        assertThat(message, instanceOf(OutgoingKafkaRecord.class));
         String value = message.getPayload();
-        String key = ((OutgoingKafkaRecord<String, String>)message).getKey();
+        assertThat(value, jsonPartEquals("created", 1));
+        assertThat(value, jsonPartEquals("responders[0].id", "responder123"));
+        OutgoingKafkaRecordMetadata outgoingKafkaRecordMetadata = null;
+        DefaultOutgoingCloudEventMetadata outgoingCloudEventMetadata = null;
+        for (Object next : message.getMetadata()) {
+            if (next instanceof OutgoingKafkaRecordMetadata) {
+                outgoingKafkaRecordMetadata = (OutgoingKafkaRecordMetadata) next;
+            } else if (next instanceof DefaultOutgoingCloudEventMetadata) {
+                outgoingCloudEventMetadata = (DefaultOutgoingCloudEventMetadata) next;
+            }
+        }
+        assertThat(outgoingCloudEventMetadata, notNullValue());
+        assertThat(outgoingKafkaRecordMetadata, notNullValue());
+        String key = (String) outgoingKafkaRecordMetadata.getKey();
         assertThat(key, notNullValue());
-        assertThat(value, jsonNodePresent("id"));
-        assertThat(value, jsonPartEquals("messageType", "RespondersCreatedEvent"));
-        assertThat(value, jsonPartEquals("invokingService", "ResponderService"));
-        assertThat(value, jsonNodePresent("timestamp"));
-        assertThat(value, jsonNodePresent("body"));
-        assertThat(value, jsonPartEquals("body.created", 1));
-        assertThat(value, jsonPartEquals("body.responders[0].id", "responder123"));
+        assertThat(outgoingCloudEventMetadata.getId(), notNullValue());
+        assertThat(outgoingCloudEventMetadata.getSpecVersion(), equalTo("1.0"));
+        assertThat(outgoingCloudEventMetadata.getType(), equalTo("RespondersCreatedEvent"));
+        assertThat(outgoingCloudEventMetadata.getTimeStamp().isPresent(), is(true));
+        assertThat(outgoingCloudEventMetadata.getExtension("incidentid").isEmpty(), is(true));
     }
 
+    @SuppressWarnings("rawtypes")
     @Test
     void testRespondersCreated() {
 
@@ -85,21 +97,32 @@ public class EventPublisherTest {
 
         assertThat(results.received().size(), equalTo(1));
         Message<String> message = results.received().get(0);
-        assertThat(message, instanceOf(OutgoingKafkaRecord.class));
         String value = message.getPayload();
-        String key = ((OutgoingKafkaRecord<String, String>)message).getKey();
+        assertThat(value, jsonPartEquals("created", 3));
+        assertThat(value, jsonPartEquals("responders[0].id", "responder123"));
+        assertThat(value, jsonPartEquals("responders[1].id", "responder456"));
+        assertThat(value, jsonPartEquals("responders[2].id", "responder789"));
+        OutgoingKafkaRecordMetadata outgoingKafkaRecordMetadata = null;
+        DefaultOutgoingCloudEventMetadata outgoingCloudEventMetadata = null;
+        for (Object next : message.getMetadata()) {
+            if (next instanceof OutgoingKafkaRecordMetadata) {
+                outgoingKafkaRecordMetadata = (OutgoingKafkaRecordMetadata) next;
+            } else if (next instanceof DefaultOutgoingCloudEventMetadata) {
+                outgoingCloudEventMetadata = (DefaultOutgoingCloudEventMetadata) next;
+            }
+        }
+        assertThat(outgoingCloudEventMetadata, Matchers.notNullValue());
+        assertThat(outgoingKafkaRecordMetadata, Matchers.notNullValue());
+        String key = (String) outgoingKafkaRecordMetadata.getKey();
         assertThat(key, notNullValue());
-        assertThat(value, jsonNodePresent("id"));
-        assertThat(value, jsonPartEquals("messageType", "RespondersCreatedEvent"));
-        assertThat(value, jsonPartEquals("invokingService", "ResponderService"));
-        assertThat(value, jsonNodePresent("timestamp"));
-        assertThat(value, jsonNodePresent("body"));
-        assertThat(value, jsonPartEquals("body.created", 3));
-        assertThat(value, jsonPartEquals("body.responders[0].id", "responder123"));
-        assertThat(value, jsonPartEquals("body.responders[1].id", "responder456"));
-        assertThat(value, jsonPartEquals("body.responders[2].id", "responder789"));
+        assertThat(outgoingCloudEventMetadata.getId(), notNullValue());
+        assertThat(outgoingCloudEventMetadata.getSpecVersion(), equalTo("1.0"));
+        assertThat(outgoingCloudEventMetadata.getType(), equalTo("RespondersCreatedEvent"));
+        assertThat(outgoingCloudEventMetadata.getTimeStamp().isPresent(), is(true));
+        assertThat(outgoingCloudEventMetadata.getExtension("incidentid").isEmpty(), is(true));
     }
 
+    @SuppressWarnings("rawtypes")
     @Test
     void testRespondersDeleted() {
 
@@ -109,21 +132,32 @@ public class EventPublisherTest {
 
         assertThat(results.received().size(), equalTo(1));
         Message<String> message = results.received().get(0);
-        assertThat(message, instanceOf(OutgoingKafkaRecord.class));
         String value = message.getPayload();
-        String key = ((OutgoingKafkaRecord<String, String>)message).getKey();
+        assertThat(value, jsonPartEquals("deleted", 3));
+        assertThat(value, jsonPartEquals("responders[0]", "\"1\""));
+        assertThat(value, jsonPartEquals("responders[1]", "\"2\""));
+        assertThat(value, jsonPartEquals("responders[2]", "\"3\""));
+        OutgoingKafkaRecordMetadata outgoingKafkaRecordMetadata = null;
+        DefaultOutgoingCloudEventMetadata outgoingCloudEventMetadata = null;
+        for (Object next : message.getMetadata()) {
+            if (next instanceof OutgoingKafkaRecordMetadata) {
+                outgoingKafkaRecordMetadata = (OutgoingKafkaRecordMetadata) next;
+            } else if (next instanceof DefaultOutgoingCloudEventMetadata) {
+                outgoingCloudEventMetadata = (DefaultOutgoingCloudEventMetadata) next;
+            }
+        }
+        assertThat(outgoingCloudEventMetadata, Matchers.notNullValue());
+        assertThat(outgoingKafkaRecordMetadata, Matchers.notNullValue());
+        String key = (String) outgoingKafkaRecordMetadata.getKey();
         assertThat(key, notNullValue());
-        assertThat(value, jsonNodePresent("id"));
-        assertThat(value, jsonPartEquals("messageType", "RespondersDeletedEvent"));
-        assertThat(value, jsonPartEquals("invokingService", "ResponderService"));
-        assertThat(value, jsonNodePresent("timestamp"));
-        assertThat(value, jsonNodePresent("body"));
-        assertThat(value, jsonPartEquals("body.deleted", 3));
-        assertThat(value, jsonPartEquals("body.responders[0]", "\"1\""));
-        assertThat(value, jsonPartEquals("body.responders[1]", "\"2\""));
-        assertThat(value, jsonPartEquals("body.responders[2]", "\"3\""));
+        assertThat(outgoingCloudEventMetadata.getId(), notNullValue());
+        assertThat(outgoingCloudEventMetadata.getSpecVersion(), equalTo("1.0"));
+        assertThat(outgoingCloudEventMetadata.getType(), equalTo("RespondersDeletedEvent"));
+        assertThat(outgoingCloudEventMetadata.getTimeStamp().isPresent(), is(true));
+        assertThat(outgoingCloudEventMetadata.getExtension("incidentid").isEmpty(), is(true));
     }
 
+    @SuppressWarnings("rawtypes")
     @Test
     void testResponderUpdated() {
 
@@ -141,37 +175,43 @@ public class EventPublisherTest {
                 .enrolled(true)
                 .build();
 
-        Map<String, String> context = new HashMap<>();
-        context.put("incidentId", "qwerty");
-
-        eventPublisher.responderUpdated(ImmutableTriple.of(true, "message", responder1), context);
+        eventPublisher.responderUpdated(ImmutableTriple.of(true, "message", responder1), "incident123");
 
         Message<String> message = results.received().get(0);
         assertThat(results.received().size(), equalTo(1));
-        assertThat(message, instanceOf(OutgoingKafkaRecord.class));
         String value = message.getPayload();
-        String key = ((OutgoingKafkaRecord<String, String>)message).getKey();
+        assertThat(value, jsonPartEquals("status", "success"));
+        assertThat(value, jsonPartEquals("statusMessage", "message"));
+        assertThat(value, jsonNodePresent("responder"));
+        assertThat(value, jsonPartEquals("responder.id", "\"1\""));
+        assertThat(value, jsonPartEquals("responder.name", "John Doe"));
+        assertThat(value, jsonPartEquals("responder.phoneNumber", "111-222-333"));
+        assertThat(value, jsonPartEquals("responder.latitude", 30.12345));
+        assertThat(value, jsonPartEquals("responder.longitude", -70.98765));
+        assertThat(value, jsonPartEquals("responder.boatCapacity", 3));
+        assertThat(value, jsonPartEquals("responder.medicalKit", true));
+        assertThat(value, jsonPartEquals("responder.available", true));
+        assertThat(value, jsonPartEquals("responder.enrolled", true));
+        assertThat(value, jsonPartEquals("responder.person", false));
+        OutgoingKafkaRecordMetadata outgoingKafkaRecordMetadata = null;
+        DefaultOutgoingCloudEventMetadata outgoingCloudEventMetadata = null;
+        for (Object next : message.getMetadata()) {
+            if (next instanceof OutgoingKafkaRecordMetadata) {
+                outgoingKafkaRecordMetadata = (OutgoingKafkaRecordMetadata) next;
+            } else if (next instanceof DefaultOutgoingCloudEventMetadata) {
+                outgoingCloudEventMetadata = (DefaultOutgoingCloudEventMetadata) next;
+            }
+        }
+        assertThat(outgoingCloudEventMetadata, notNullValue());
+        assertThat(outgoingKafkaRecordMetadata, notNullValue());
+        String key = (String) outgoingKafkaRecordMetadata.getKey();
         assertThat(key, equalTo("1"));
-        assertThat(value, jsonNodePresent("id"));
-        assertThat(value, jsonPartEquals("messageType", "ResponderUpdatedEvent"));
-        assertThat(value, jsonPartEquals("invokingService", "ResponderService"));
-        assertThat(value, jsonNodePresent("timestamp"));
-        assertThat(value, jsonNodePresent("header"));
-        assertThat(value, jsonPartEquals("header.incidentId", "qwerty"));
-        assertThat(value, jsonNodePresent("body"));
-        assertThat(value, jsonPartEquals("body.status", "success"));
-        assertThat(value, jsonPartEquals("body.statusMessage", "message"));
-        assertThat(value, jsonNodePresent("body.responder"));
-        assertThat(value, jsonPartEquals("body.responder.id", "\"1\""));
-        assertThat(value, jsonPartEquals("body.responder.name", "John Doe"));
-        assertThat(value, jsonPartEquals("body.responder.phoneNumber", "111-222-333"));
-        assertThat(value, jsonPartEquals("body.responder.latitude", 30.12345));
-        assertThat(value, jsonPartEquals("body.responder.longitude", -70.98765));
-        assertThat(value, jsonPartEquals("body.responder.boatCapacity", 3));
-        assertThat(value, jsonPartEquals("body.responder.medicalKit", true));
-        assertThat(value, jsonPartEquals("body.responder.available", true));
-        assertThat(value, jsonPartEquals("body.responder.enrolled", true));
-        assertThat(value, jsonPartEquals("body.responder.person", false));
+        assertThat(outgoingCloudEventMetadata.getId(), notNullValue());
+        assertThat(outgoingCloudEventMetadata.getSpecVersion(), equalTo("1.0"));
+        assertThat(outgoingCloudEventMetadata.getType(), equalTo("ResponderUpdatedEvent"));
+        assertThat(outgoingCloudEventMetadata.getTimeStamp().isPresent(), is(true));
+        assertThat(outgoingCloudEventMetadata.getExtension("incidentid").isPresent(), is(true));
+        assertThat(outgoingCloudEventMetadata.getExtension("incidentid").get(), equalTo("incident123"));
     }
 
 }

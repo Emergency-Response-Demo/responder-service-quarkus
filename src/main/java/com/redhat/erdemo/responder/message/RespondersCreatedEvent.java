@@ -4,7 +4,7 @@ import com.redhat.erdemo.responder.model.Responder;
 
 public class RespondersCreatedEvent {
 
-    private RespondersCreatedEvent() {};
+    private RespondersCreatedEvent() {}
 
     private int created;
 

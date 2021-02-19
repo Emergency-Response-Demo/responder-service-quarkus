@@ -9,6 +9,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -28,7 +29,6 @@ import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.MockitoAnnotations;
 
 @QuarkusTest
 public class ResponderResourceTest {
@@ -523,7 +523,7 @@ public class ResponderResourceTest {
     @Test
     void testCreateResponderEndpoint() {
 
-        MockitoAnnotations.initMocks(this);
+        openMocks(this);
 
         String body = "{\"available\":true,\"boatCapacity\":3,\"enrolled\":false,\"latitude\":30.12345,"
                 + "\"longitude\":-70.98765,\"medicalKit\":true,\"name\":\"John Foo\",\"person\":true,"
@@ -551,7 +551,7 @@ public class ResponderResourceTest {
     @Test
     void testCreateRespondersEndpoint() {
 
-        MockitoAnnotations.initMocks(this);
+        openMocks(this);
 
         String body = "[{\"available\":true,\"boatCapacity\":3,\"enrolled\":false,\"latitude\":30.12345,"
                 + "\"longitude\":-70.98765,\"medicalKit\":true,\"name\":\"John Doe\",\"person\":true,"
@@ -588,7 +588,7 @@ public class ResponderResourceTest {
     @Test
     void testUpdateResponderEndpoint() {
 
-        MockitoAnnotations.initMocks(this);
+        openMocks(this);
 
         String body = "{\"id\":\"1\",\"available\":true,\"latitude\":30.12345,\"longitude\":-70.98765}";
 

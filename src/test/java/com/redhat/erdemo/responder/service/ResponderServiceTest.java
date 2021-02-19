@@ -11,7 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -55,7 +55,7 @@ public class ResponderServiceTest {
 
     @BeforeEach
     void init() {
-        initMocks(this);
+        openMocks(this);
     }
 
     @Test
