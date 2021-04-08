@@ -1,5 +1,7 @@
 package com.redhat.erdemo.responder.rest;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -110,10 +112,9 @@ public class ResponderResource {
     @POST
     @Path("/responder")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createResponder(Responder responder) {
-
-        responderService.createResponder(responder);
-        return Response.status(Status.CREATED).build();
+    public Response createResponder(Responder responder) throws URISyntaxException {
+        Responder created = responderService.createResponder(responder);
+        return Response.created(new URI("/responder/" + created.getId())).build();
     }
 
     @POST

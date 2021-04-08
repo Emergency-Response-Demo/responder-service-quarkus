@@ -2,6 +2,7 @@ package com.redhat.erdemo.responder.rest;
 
 import static io.restassured.RestAssured.given;
 import static net.javacrumbs.jsonunit.JsonMatchers.jsonEquals;
+import static org.hamcrest.CoreMatchers.endsWith;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -525,13 +526,18 @@ public class ResponderResourceTest {
 
         openMocks(this);
 
+        when(responderService.createResponder(any(Responder.class))).thenReturn(
+                new Responder.Builder("1").name("John Foo").phoneNumber("111-222-333").latitude(new BigDecimal("30.12345"))
+                        .longitude(new BigDecimal("-70.98765")).boatCapacity(3).medicalKit(true).available(true)
+                        .enrolled(false).person(true).build());
+
         String body = "{\"available\":true,\"boatCapacity\":3,\"enrolled\":false,\"latitude\":30.12345,"
                 + "\"longitude\":-70.98765,\"medicalKit\":true,\"name\":\"John Foo\",\"person\":true,"
                 + "\"phoneNumber\":\"111-222-333\"}";
 
         given().when().with().body(body).header(new Header("Content-Type", "application/json"))
             .post("/responder")
-            .then().assertThat().statusCode(201).body(equalTo(""));
+            .then().assertThat().statusCode(201).header("Location", endsWith("/responder/1")).body(equalTo(""));
 
         verify(responderService).createResponder(responderCaptor.capture());
         Responder responder = responderCaptor.getValue();
