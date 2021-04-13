@@ -66,7 +66,7 @@ public class ResponderUpdateCommandSourceTest {
     }
 
     @Test
-    void testProcessMessage() throws ExecutionException, InterruptedException {
+    void testProcessMessageSetResponderUnavailable() throws ExecutionException, InterruptedException {
         String json = "{" +
                 "\"responder\" : {" +
                 "\"id\" : \"1\"," +
@@ -86,7 +86,7 @@ public class ResponderUpdateCommandSourceTest {
 
         when(responderService.updateResponder(any(Responder.class))).thenReturn(new ImmutableTriple<>(true, "ok", updated));
 
-        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, true, "application/json", "UpdateResponderCommand", "incident"));
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, true, "application/json", "SetResponderUnavailableCommand", "incident"));
         c.toCompletableFuture().get();
 
         verify(responderService).updateResponder(responderCaptor.capture());
@@ -101,14 +101,14 @@ public class ResponderUpdateCommandSourceTest {
         assertThat(captured.getBoatCapacity(), nullValue());
         assertThat(captured.isMedicalKit(), nullValue());
 
-        verify(eventPublisher).responderUpdated(eq(new ImmutableTriple<>(true, "ok", updated)), eq("incident"));
+        verify(eventPublisher).responderSetUnavailable(eq(new ImmutableTriple<>(true, "ok", updated)), eq("incident"));
 
         assertThat(messageAck, equalTo(true));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testProcessMessageUpdateResponderNoIncidentIdExtension() throws ExecutionException, InterruptedException {
+    public void testProcessMessageSetResponderUnavailableNoIncidentIdExtension() throws ExecutionException, InterruptedException {
 
         String json = "{" +
                 "\"responder\" : {" +
@@ -128,7 +128,7 @@ public class ResponderUpdateCommandSourceTest {
                 .build();
         when(responderService.updateResponder(any(Responder.class))).thenReturn(new ImmutableTriple<>(true, "ok", updated));
 
-        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("2", json, true, "application/json", "UpdateResponderCommand", null));
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("2", json, true, "application/json", "SetResponderUnavailableCommand", null));
         c.toCompletableFuture().get();
 
         verify(responderService).updateResponder(responderCaptor.capture());
@@ -143,13 +143,13 @@ public class ResponderUpdateCommandSourceTest {
         assertThat(captured.getBoatCapacity(), nullValue());
         assertThat(captured.isMedicalKit(), nullValue());
 
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
         assertThat(messageAck, equalTo(true));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testProcessMessageUpdateResponderIncidentIdExtensionBlank() throws ExecutionException, InterruptedException {
+    public void testProcessMessageSetResponderUnavailableIncidentIdExtensionBlank() throws ExecutionException, InterruptedException {
 
         String json = "{" +
                 "\"responder\" : {" +
@@ -169,7 +169,7 @@ public class ResponderUpdateCommandSourceTest {
                 .build();
         when(responderService.updateResponder(any(Responder.class))).thenReturn(new ImmutableTriple<>(true, "ok", updated));
 
-        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("2", json, true, "application/json", "UpdateResponderCommand", null));
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("2", json, true, "application/json", "SetResponderUnavailableCommand", ""));
         c.toCompletableFuture().get();
 
         verify(responderService).updateResponder(responderCaptor.capture());
@@ -184,7 +184,51 @@ public class ResponderUpdateCommandSourceTest {
         assertThat(captured.getBoatCapacity(), nullValue());
         assertThat(captured.isMedicalKit(), nullValue());
 
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
+        assertThat(messageAck, equalTo(true));
+    }
+
+    @Test
+    void testProcessMessageResponderUpdate() throws ExecutionException, InterruptedException {
+        String json = "{" +
+                "\"responder\" : {" +
+                "\"id\" : \"1\"," +
+                "\"available\" : true," +
+                "\"enrolled\" : false" +
+                "} " +
+                "}";
+
+        Responder updated = new Responder.Builder("1")
+                .name("John Doe")
+                .phoneNumber("111-222-333")
+                .longitude(new BigDecimal("30.12345"))
+                .latitude(new BigDecimal("-77.98765"))
+                .boatCapacity(3)
+                .medicalKit(true)
+                .available(true)
+                .enrolled(false)
+                .build();
+
+        when(responderService.updateResponder(any(Responder.class))).thenReturn(new ImmutableTriple<>(true, "ok", updated));
+
+        CompletionStage<CompletionStage<Void>> c =  source.onMessage(toRecord("1", json, true, "application/json", "UpdateResponderCommand", null));
+        c.toCompletableFuture().get();
+
+        verify(responderService).updateResponder(responderCaptor.capture());
+        Responder captured = responderCaptor.getValue();
+        assertThat(captured, notNullValue());
+        assertThat(captured.getId(), equalTo("1"));
+        assertThat(captured.isAvailable(), equalTo(true));
+        assertThat(captured.isEnrolled(), equalTo(false));
+        assertThat(captured.getName(), nullValue());
+        assertThat(captured.getPhoneNumber(), nullValue());
+        assertThat(captured.getLatitude(), nullValue());
+        assertThat(captured.getLongitude(), nullValue());
+        assertThat(captured.getBoatCapacity(), nullValue());
+        assertThat(captured.isMedicalKit(), nullValue());
+
+        verify(eventPublisher).responderUpdated(eq(updated));
+
         assertThat(messageAck, equalTo(true));
     }
 
@@ -198,7 +242,7 @@ public class ResponderUpdateCommandSourceTest {
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponder(any(Responder.class));
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
         assertThat(messageAck, equalTo(true));
     }
 
@@ -212,7 +256,7 @@ public class ResponderUpdateCommandSourceTest {
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponder(any(Responder.class));
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
         assertThat(messageAck, equalTo(true));
     }
 
@@ -226,7 +270,7 @@ public class ResponderUpdateCommandSourceTest {
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponder(any(Responder.class));
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
         assertThat(messageAck, equalTo(true));
     }
 
@@ -240,7 +284,7 @@ public class ResponderUpdateCommandSourceTest {
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponder(any(Responder.class));
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
         assertThat(messageAck, equalTo(true));
     }
 
@@ -254,7 +298,7 @@ public class ResponderUpdateCommandSourceTest {
         c.toCompletableFuture().get();
 
         verify(responderService, never()).updateResponder(any(Responder.class));
-        verify(eventPublisher, never()).responderUpdated(any(Triple.class), any(String.class));
+        verify(eventPublisher, never()).responderSetUnavailable(any(Triple.class), any(String.class));
         assertThat(messageAck, equalTo(true));
     }
 

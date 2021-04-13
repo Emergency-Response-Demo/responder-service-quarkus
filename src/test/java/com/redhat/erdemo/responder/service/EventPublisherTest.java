@@ -159,7 +159,7 @@ public class EventPublisherTest {
 
     @SuppressWarnings("rawtypes")
     @Test
-    void testResponderUpdated() {
+    void testResponderSetUnavailable() {
 
         InMemorySink<String> results = connector.sink("responder-event");
 
@@ -175,7 +175,7 @@ public class EventPublisherTest {
                 .enrolled(true)
                 .build();
 
-        eventPublisher.responderUpdated(ImmutableTriple.of(true, "message", responder1), "incident123");
+        eventPublisher.responderSetUnavailable(ImmutableTriple.of(true, "message", responder1), "incident123");
 
         Message<String> message = results.received().get(0);
         assertThat(results.received().size(), equalTo(1));
@@ -208,10 +208,63 @@ public class EventPublisherTest {
         assertThat(key, equalTo("1"));
         assertThat(outgoingCloudEventMetadata.getId(), notNullValue());
         assertThat(outgoingCloudEventMetadata.getSpecVersion(), equalTo("1.0"));
-        assertThat(outgoingCloudEventMetadata.getType(), equalTo("ResponderUpdatedEvent"));
+        assertThat(outgoingCloudEventMetadata.getType(), equalTo("ResponderSetUnavailableEvent"));
         assertThat(outgoingCloudEventMetadata.getTimeStamp().isPresent(), is(true));
         assertThat(outgoingCloudEventMetadata.getExtension("incidentid").isPresent(), is(true));
         assertThat(outgoingCloudEventMetadata.getExtension("incidentid").get(), equalTo("incident123"));
+    }
+
+    @Test
+    void testResponderUpdated() {
+
+        InMemorySink<String> results = connector.sink("responder-event");
+
+        Responder responder1 = new Responder.Builder("1")
+                .name("John Doe")
+                .phoneNumber("111-222-333")
+                .latitude(new BigDecimal("30.12345"))
+                .longitude(new BigDecimal("-70.98765"))
+                .boatCapacity(3)
+                .medicalKit(true)
+                .available(true)
+                .person(false)
+                .enrolled(true)
+                .build();
+
+        eventPublisher.responderUpdated(responder1);
+
+        Message<String> message = results.received().get(0);
+        assertThat(results.received().size(), equalTo(1));
+        String value = message.getPayload();
+        assertThat(value, jsonNodePresent("responder"));
+        assertThat(value, jsonPartEquals("responder.id", "\"1\""));
+        assertThat(value, jsonPartEquals("responder.name", "John Doe"));
+        assertThat(value, jsonPartEquals("responder.phoneNumber", "111-222-333"));
+        assertThat(value, jsonPartEquals("responder.latitude", 30.12345));
+        assertThat(value, jsonPartEquals("responder.longitude", -70.98765));
+        assertThat(value, jsonPartEquals("responder.boatCapacity", 3));
+        assertThat(value, jsonPartEquals("responder.medicalKit", true));
+        assertThat(value, jsonPartEquals("responder.available", true));
+        assertThat(value, jsonPartEquals("responder.enrolled", true));
+        assertThat(value, jsonPartEquals("responder.person", false));
+        OutgoingKafkaRecordMetadata outgoingKafkaRecordMetadata = null;
+        DefaultOutgoingCloudEventMetadata outgoingCloudEventMetadata = null;
+        for (Object next : message.getMetadata()) {
+            if (next instanceof OutgoingKafkaRecordMetadata) {
+                outgoingKafkaRecordMetadata = (OutgoingKafkaRecordMetadata) next;
+            } else if (next instanceof DefaultOutgoingCloudEventMetadata) {
+                outgoingCloudEventMetadata = (DefaultOutgoingCloudEventMetadata) next;
+            }
+        }
+        assertThat(outgoingCloudEventMetadata, notNullValue());
+        assertThat(outgoingKafkaRecordMetadata, notNullValue());
+        String key = (String) outgoingKafkaRecordMetadata.getKey();
+        assertThat(key, equalTo("1"));
+        assertThat(outgoingCloudEventMetadata.getId(), notNullValue());
+        assertThat(outgoingCloudEventMetadata.getSpecVersion(), equalTo("1.0"));
+        assertThat(outgoingCloudEventMetadata.getType(), equalTo("ResponderUpdatedEvent"));
+        assertThat(outgoingCloudEventMetadata.getTimeStamp().isPresent(), is(true));
+        assertThat(outgoingCloudEventMetadata.getExtension("incidentid").isPresent(), is(false));
     }
 
 }
