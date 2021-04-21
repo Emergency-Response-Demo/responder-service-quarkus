@@ -5,6 +5,7 @@ import java.util.List;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import com.redhat.erdemo.responder.message.ResponderSetUnavailableEvent;
 import com.redhat.erdemo.responder.message.ResponderUpdatedEvent;
 import com.redhat.erdemo.responder.message.RespondersCreatedEvent;
 import com.redhat.erdemo.responder.message.RespondersDeletedEvent;
@@ -30,26 +31,35 @@ public class EventPublisher {
 
     public void responderCreated(Responder responder) {
         RespondersCreatedEvent event = new RespondersCreatedEvent.Builder(new Responder[]{responder}).build();
-        emitter.send(toMessage(Integer.toString(responder.hashCode()), Json.encode(event), "RespondersCreatedEvent",null));
+        emitter.send(toMessage(Integer.toString(responder.hashCode()), Json.encode(event), "RespondersCreatedEvent"));
     }
 
     public void respondersCreated(List<Responder> responders) {
         RespondersCreatedEvent event = new RespondersCreatedEvent.Builder(responders.toArray(new Responder[0])).build();
-        emitter.send(toMessage(Integer.toString(responders.hashCode()), Json.encode(event),"RespondersCreatedEvent",null));
+        emitter.send(toMessage(Integer.toString(responders.hashCode()), Json.encode(event),"RespondersCreatedEvent"));
     }
 
     public void respondersDeleted(List<String> ids) {
         RespondersDeletedEvent event = new RespondersDeletedEvent.Builder(ids.toArray(new String[0])).build();
-        emitter.send(toMessage(Integer.toString(ids.hashCode()), Json.encode(event), "RespondersDeletedEvent", null));
+        emitter.send(toMessage(Integer.toString(ids.hashCode()), Json.encode(event), "RespondersDeletedEvent"));
     }
 
-    public void responderUpdated(Triple<Boolean, String, Responder> status, String incidentId) {
-        ResponderUpdatedEvent event = new ResponderUpdatedEvent.Builder(status.getLeft() ? "success" : "error", status.getRight())
+    public void responderSetUnavailable(Triple<Boolean, String, Responder> status, String incidentId) {
+        ResponderSetUnavailableEvent event = new ResponderSetUnavailableEvent.Builder(status.getLeft() ? "success" : "error", status.getRight())
                         .statusMessage(status.getMiddle()).build();
-        emitter.send(toMessage(status.getRight().getId(), Json.encode(event),"ResponderUpdatedEvent", incidentId));
+        emitter.send(toMessage(status.getRight().getId(), Json.encode(event),"ResponderSetUnavailableEvent", incidentId));
+    }
+
+    public void responderUpdated(Responder responder) {
+        ResponderUpdatedEvent event = new ResponderUpdatedEvent.Builder(responder).build();
+        emitter.send(toMessage(responder.getId(), Json.encode(event),"ResponderUpdatedEvent"));
     }
 
     @SuppressWarnings("rawtypes")
+    private org.eclipse.microprofile.reactive.messaging.Message<String> toMessage(String key, String payload, String messageType) {
+        return toMessage(key, payload, messageType, null);
+    }
+
     private org.eclipse.microprofile.reactive.messaging.Message<String> toMessage(String key, String payload, String messageType, String incidentId) {
         log.debug(messageType + ": " + payload);
         OutgoingCloudEventMetadataBuilder cloudEventMetadataBuilder = OutgoingCloudEventMetadata.builder().withType(messageType)

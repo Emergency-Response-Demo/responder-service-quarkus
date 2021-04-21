@@ -11,6 +11,7 @@ import javax.inject.Inject;
 import com.redhat.erdemo.responder.model.Responder;
 import com.redhat.erdemo.responder.service.EventPublisher;
 import com.redhat.erdemo.responder.service.ResponderService;
+import io.smallrye.reactive.messaging.ce.CloudEventMetadata;
 import io.smallrye.reactive.messaging.ce.IncomingCloudEventMetadata;
 import io.smallrye.reactive.messaging.kafka.IncomingKafkaRecord;
 import io.vertx.core.json.JsonObject;
@@ -26,7 +27,8 @@ public class ResponderUpdateCommandSource {
     private final static Logger log = LoggerFactory.getLogger(ResponderUpdateCommandSource.class);
 
     private static final String UPDATE_RESPONDER_COMMAND = "UpdateResponderCommand";
-    private static final String[] ACCEPTED_MESSAGE_TYPES = {UPDATE_RESPONDER_COMMAND};
+    private static final String SET_RESPONDER_UNAVAILABLE_COMMAND = "SetResponderUnavailableCommand";
+    private static final String[] ACCEPTED_MESSAGE_TYPES = {UPDATE_RESPONDER_COMMAND, SET_RESPONDER_UNAVAILABLE_COMMAND};
 
     @Inject
     ResponderService responderService;
@@ -41,10 +43,15 @@ public class ResponderUpdateCommandSource {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                if (acceptMessage(message)) {
-                    String incidentId = (String) message.getMetadata(IncomingCloudEventMetadata.class).get().getExtension("incidentid").orElse(null);
-                    processMessage(new JsonObject(message.getPayload()), incidentId, message.getTopic(), message.getPartition(), message.getOffset());
-                }
+                CloudEventMetadata<String> cloudEvent = acceptMessage(message);
+                String incidentId = (String) cloudEvent.getExtension("incidentid").orElse(null);
+                JsonObject responderJson = new JsonObject(cloudEvent.getData()).getJsonObject("responder");
+                Responder responder = fromJson(responderJson);
+                log.debug("Processing '" + cloudEvent.getType() + "' message for responder '" + responder.getId()
+                        + "' from topic:partition:offset " + message.getTopic() + ":" + message.getPartition() + ":" + message.getOffset() +". Message: " + cloudEvent.getData());
+                processMessage(responder, incidentId);
+            } catch (MessageIgnoredException e) {
+
             } catch (Exception e) {
                 log.error("Error processing msg " + message.getPayload(), e);
             }
@@ -52,44 +59,40 @@ public class ResponderUpdateCommandSource {
         });
     }
 
-    private void processMessage(JsonObject json, String incidentId, String topic, int partition, long offset) {
-
-        JsonObject responderJson = json.getJsonObject("responder");
-        Responder responder = fromJson(responderJson);
-
-        log.debug("Processing '" + UPDATE_RESPONDER_COMMAND + "' message for responder '" + responder.getId()
-                + "' from topic:partition:offset " + topic + ":" + partition + ":" + offset +". Message: " + json.toString());
+    private void processMessage(Responder responder, String incidentId) {
 
         Triple<Boolean, String, Responder> result = responderService.updateResponder(responder);
 
         if (incidentId != null && !incidentId.isBlank()) {
-            eventPublisher.responderUpdated(result, incidentId);
+            eventPublisher.responderSetUnavailable(result, incidentId);
+        } else {
+            eventPublisher.responderUpdated(result.getRight());
         }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private boolean acceptMessage(IncomingKafkaRecord<String, String> message) {
+    private CloudEventMetadata<String> acceptMessage(IncomingKafkaRecord<String, String> message) {
         try {
             Optional<IncomingCloudEventMetadata> metadata = message.getMetadata(IncomingCloudEventMetadata.class);
             if (metadata.isEmpty()) {
                 log.warn("Incoming message is not a CloudEvent");
-                return false;
+                throw new MessageIgnoredException("Incoming message is not a CloudEvent");
             }
             IncomingCloudEventMetadata<String> cloudEventMetadata = metadata.get();
             String dataContentType = cloudEventMetadata.getDataContentType().orElse("");
             if (!dataContentType.equalsIgnoreCase("application/json")) {
                 log.warn("CloudEvent data content type is not specified or not 'application/json'. Message is ignored");
-                return false;
+                throw new MessageIgnoredException("CloudEvent data content type is not specified or not 'application/json'. Message is ignored");
             }
             String type = cloudEventMetadata.getType();
             if (!(Arrays.asList(ACCEPTED_MESSAGE_TYPES).contains(type))) {
                 log.debug("CloudEvent with type '" + type + "' is ignored");
-                return false;
+                throw new MessageIgnoredException("CloudEvent with type '" + type + "' is ignored");
             }
-            return true;
+            return metadata.get();
         } catch (Exception e) {
             log.warn("Unexpected message is ignored: " + message.getPayload());
-            return false;
+            throw new MessageIgnoredException("Unexpected message is ignored: " + message.getPayload());
         }
     }
 
@@ -105,8 +108,15 @@ public class ResponderUpdateCommandSource {
                 .latitude(json.getDouble("latitude") != null ? BigDecimal.valueOf(json.getDouble("latitude")) : null)
                 .longitude(json.getDouble("longitude") != null ? BigDecimal.valueOf(json.getDouble("longitude")) : null)
                 .available(json.getBoolean("available"))
-                .enrolled(json.getBoolean("enrolled)"))
+                .enrolled(json.getBoolean("enrolled"))
                 .person(json.getBoolean("person"))
                 .build();
+    }
+
+    private static class MessageIgnoredException extends RuntimeException {
+
+        public MessageIgnoredException(String s) {
+            super(s);
+        }
     }
 }
